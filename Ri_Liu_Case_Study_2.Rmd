@@ -1,0 +1,245 @@
+---
+title: "Ri_Liu_Case_Study_2"
+author: "Ri Liu"
+date: "4/9/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+There is 1 dataset(csv) with 3 years worth of customer orders. There are 4 columns in the csv dataset: index, CUSTOMER_EMAIL(unique identifier as hash), Net_Revenue, and Year.
+For each year we need the following information:
+
+•	Revenue lost from attrition
+•	Existing Customer Revenue Current Year
+•	Existing Customer Revenue Prior Year
+•	Total Customers Current Year
+•	Total Customers Previous Year
+•	New Customers
+•	Lost Customers
+```{r message=FALSE}
+# packages 
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+# read data
+data <- read.csv('casestudy.csv')
+```
+
+
+## Customer Analysis
+
+### Total customers
+
+```{r}
+# total customers in 2015
+customer_2015 <- data %>%
+  filter(year == 2015) %>%
+  select(customer_email) %>% 
+  distinct()
+paste('Total customers in 2015: ', dim(customer_2015)[1])
+```
+
+```{r}
+# total customers in 2016
+customer_2016 <- data %>%
+  filter(year == 2016) %>%
+  select(customer_email) %>% 
+  distinct()
+paste('Total customers in 2016: ', dim(customer_2016)[1])
+```
+```{r}
+# total customers in 2017
+customer_2017 <- data %>%
+  filter(year == 2017) %>%
+  select(customer_email) %>% 
+  distinct()
+paste('Total customers in 2017: ', dim(customer_2017)[1])
+```
+```{r}
+(dim(customer_2017)[1] - dim(customer_2016)[1]) / dim(customer_2016)[1] * 100
+```
+
+
+### Existing Customers
+```{r}
+# existing customers in 2016
+existingCustomer_2016 <- inner_join(customer_2015, customer_2016, "customer_email")
+paste('Existing customers in 2016: ', dim(existingCustomer_2016)[1])
+```
+
+```{r}
+# existing customers in 2015 and 2016
+customer_1516 <- distinct(rbind(customer_2015, customer_2016))
+
+# existing customers in 2017
+existingCustomer_2017 <- inner_join(customer_2017, customer_1516, "customer_email")
+paste('Existing customers in 2017: ', dim(existingCustomer_2017)[1])
+```
+
+### New Customers 
+```{r}
+# new customers in 2016
+newCustomer_2016 <- data %>%
+  filter(year == 2016 & !customer_email %in% existingCustomer_2016[[1]]) %>%
+  select(customer_email)
+paste('New customers in 2016: ', dim(newCustomer_2016)[1])
+```
+
+```{r}
+# new customers in 2017
+newCustomer_2017 <- data %>% 
+  filter(year == 2017 & !customer_email %in% existingCustomer_2017[[1]]) %>%
+  select(customer_email)
+paste('New customers in 2017: ', dim(newCustomer_2017)[1])
+```
+
+```{r}
+# new customer (number) growth rate 2016 to 2017
+paste('New customers growth rate 2016 to 2017: ', round((dim(newCustomer_2017)[[1]] - dim(newCustomer_2016)[[1]]) / dim(newCustomer_2016)[[1]] * 100, 2), '%')
+```
+
+### Lost Customers
+```{r}
+paste('Lost customers 2016-2017: ', abs(dim(existingCustomer_2016)[[1]] - dim(existingCustomer_2017)[[1]]))
+# customer lost rate 2016 to 2017
+(dim(existingCustomer_2016)[[1]] - dim(existingCustomer_2017)[[1]]) / dim(existingCustomer_2016)[[1]] * 100
+```
+
+```{r}
+# add a column to denote as existing or new customers
+data$New_Customer <- NA
+data[data$year == 2016, ] <- data %>% 
+  filter(year == 2016) %>%
+  mutate(New_Customer = if_else(customer_email %in% existingCustomer_2016[[1]], 'Existing Customer', 'New Customer'))
+data[data$year == 2017, ] <- data %>% 
+  filter(year == 2017) %>%
+  mutate(New_Customer = if_else(customer_email %in% existingCustomer_2017[[1]], 'Existing Customer', 'New Customer'))
+```
+
+```{r}
+ggplot(data = data, 
+       aes(x = year)) + 
+  geom_bar(position = 'stack', aes(fill = New_Customer)) + 
+  geom_text(stat='count', aes(label=..count..), vjust = -0.5) + 
+  labs(title = 'Customer Change 2015-2017',        
+       x = 'Year',
+       y = 'Total Customers') 
+```
+From 2016 to 2017, we lost 37859 (63.54%) existing customers. But we gained 57.35% more new customers. And our total yearly active customer had a 22.16% increase, from 204646 to 249987. It is also higher in 2017 compared with 2015. There might be an action from 2016 to 2017 to reverse the downward trend of total number of customers. And we can see that there is a larger number and proportion of new customers in 2017. But the decrease of number of existing customer suggests that the action probably affected existing customers' experience. 
+
+
+
+## Revenue Analysis
+
+### Total revenue for the current year
+
+```{r}
+# total revenue in each year and yearly growth rate
+totalRevenue <- data %>%
+  group_by(year) %>% 
+  summarise('Total revenue for the current year' = sum(net_revenue)) %>%
+  mutate('Revenue Growth Rate(%)' = (.[,2, drop=T] - lag(.[,2,drop=T])) / lag(.[,2,drop=T]) * 100)
+totalRevenue
+```
+### New Customer Revenue
+
+```{r}
+# new customer revenue in 2016
+new_revenue_2016 <- data %>% 
+  filter(year == 2016 & !customer_email %in% existingCustomer_2016[[1]]) %>%
+  summarise('New Customer Revenue in 2016' = sum(net_revenue))
+new_revenue_2016
+```
+
+```{r}
+# new customer revenue in 2017
+new_revenue_2017 <- data %>%
+  filter(year == 2017 & !customer_email %in% existingCustomer_2017[[1]]) %>%
+  summarise('New Customer Revenue in 2017' = sum(net_revenue))
+new_revenue_2017
+```
+
+```{r}
+paste('New Customer Growth Rate 2016-2017: ', 
+      round((new_revenue_2017[[1]] - new_revenue_2016[[1]]) / new_revenue_2016[[1]] * 100, 2), 
+      '%')
+```
+
+
+### Existing Customer Revenue
+- 2016
+```{r}
+# existing customer revenue in 2016
+existing_revenue_2016 <- data %>% 
+  filter(year == 2016 & customer_email %in% existingCustomer_2016[[1]]) %>%
+  summarise(sum(net_revenue))
+paste('Existing customer revenue in 2016: ', round(existing_revenue_2016[[1]], 2))
+```
+- 2017
+```{r}
+# new customer revenue in 2017
+existing_revenue_2017 <- data %>% 
+  filter(year == 2017 & customer_email %in% existingCustomer_2017[[1]]) %>%
+  summarise(sum(net_revenue))
+paste('Existing customer revenue in 2016: ', round(existing_revenue_2017[[1]], 2))
+```
+
+### Existing Customer (Revenue) Growth
+```{r}
+# existing customer revenue growth 2016-2017
+paste('Existing Customer Growth 2016-2017: ', 
+      existing_revenue_2017[[1]] - existing_revenue_2016[[1]])
+```
+
+```{r}
+# existing customer revenue growth rate 2016-2017
+paste('Existing Customer Growth Rate 2016-2017: ', 
+      round((existing_revenue_2017[[1]] - existing_revenue_2016[[1]]) / existing_revenue_2016[[1]] * 100, 2), 
+      '%')
+```
+
+
+### Revenue lost from attrition
+```{r}
+revenueLost_2016 <- totalRevenue[1, 2, drop=T] - totalRevenue[2, 2, drop=T]
+paste('Revenue Attrition 2015-2016: ', round(revenueLost_2016, 2))
+```
+
+```{r}
+attritionRate_2016 <- revenueLost_2016 / totalRevenue[1, 2, drop=T] * 100
+paste('Revenue Attrition Rate 2015-2016: ', round(attritionRate_2016, 2), '%')
+```
+
+```{r}
+revenueLost_2017 <- totalRevenue[2, 2, drop=T] - totalRevenue[3, 2, drop=T]
+paste('Revenue Attrition 2016-2017: ', round(revenueLost_2017, 2))
+```
+
+```{r}
+attritionRate_2017 <- revenueLost_2017 / totalRevenue[2, 2, drop=T] * 100
+paste('Revenue Attrition Rate 2016-2017: ', round(attritionRate_2017, 2), '%')
+```
+
+```{r}
+ggplot(data, aes(year, net_revenue)) + 
+  geom_col(aes(fill = New_Customer)) + 
+  stat_summary(
+    aes(label = stat(round(y,2))), fun = 'sum', geom = 'text', vjust = -0.5
+  ) + 
+  labs(title = 'Revenue Change 2015-2017',        
+       x = 'Year',
+       y = 'Total Revenue') 
+```
+
+The revenue change is similar to the customer change. The total revenue decreased 11.4% from 2015 to 2016, then increased 22.1 from 2016 to 2017. Existing customer revenue decreased 63.38% from 2016 to 2017. While new customer revenue increased 57.17% from 2016 to 2017. The entire analysis suggests that existing customers and new customers may have similar revenue overall. 
+
+
+
+
+
+
