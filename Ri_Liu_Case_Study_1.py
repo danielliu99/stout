@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# •	Describe the dataset and any issues with it. 
-# 
-# •	Generate a minimum of 5 unique visualizations using the data and write a brief description of your observations. Additionally, all attempts should be made to make the visualizations visually appealing
-# 
-# •	Create a feature set and create a model which predicts interest_rate using at least 2 algorithms. Describe any data cleansing that must be performed and analysis when examining the data.
-# 
-# •	Visualize the test results and propose enhancements to the model, what would you do if you had more time. Also describe assumptions you made and your approach.
-# 
+# # 1 Read Data
 
 # In[1]:
 
@@ -22,29 +15,38 @@ import seaborn as sns
 # In[2]:
 
 
-pd.set_option('display.float_format',lambda x : '%.4f' % x)
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # In[3]:
+
+
+pd.set_option('display.float_format',lambda x : '%.4f' % x)
+
+
+# In[4]:
 
 
 data_raw = pd.read_csv('loans_full_schema.csv')
 data = data_raw.copy()
 
 
-# In[4]:
+# In[5]:
 
 
 data.shape
 
 
-# In[5]:
+# In[6]:
 
 
 data.head(5).append(data.tail(5))
 
 
-# In[6]:
+# # 2 Describe Data
+
+# In[7]:
 
 
 meta_dict = []
@@ -61,20 +63,20 @@ for col in data.columns:
     meta_dict.append(dict_tmp)
 
 
-# In[7]:
+# In[8]:
 
 
 meta = pd.DataFrame(meta_dict)
 meta = meta.set_index('Name').drop('interest_rate')
 
 
-# In[8]:
-
-
-meta.sort_values('NA%', ascending=False)
-
-
 # In[9]:
+
+
+meta.sort_values('NA%', ascending=False).head(15)
+
+
+# In[10]:
 
 
 # column names of columns having more than 50% missing values
@@ -82,26 +84,26 @@ high_NA = meta[meta['NA%'] > 50].index
 high_NA
 
 
-# In[10]:
+# In[11]:
 
 
 meta_new = meta[meta['NA%'] <= 50]
 # meta_new.sort_values('NA%', ascending=False)
 
 
-# In[11]:
+# In[12]:
 
 
 pd.DataFrame({'Number of variables': meta_new.groupby('Type').size()})
 
 
-# In[12]:
-
-
-meta_new.sort_values('NA%', ascending=False)
-
-
 # In[13]:
+
+
+meta_new.sort_values('NA%', ascending=False).head(10)
+
+
+# In[14]:
 
 
 # `emp_title` has too many unique text values, so I drop it
@@ -109,15 +111,17 @@ meta_new = meta_new.drop('emp_title')
 meta_new.shape
 
 
+# # 3 Exploratory Data Analysis
+
 # ### Statistical Attributes of Variables
 
-# In[14]:
+# In[15]:
 
 
 data[meta_new[meta_new.Type == 'float64'].index].describe().T
 
 
-# In[15]:
+# In[16]:
 
 
 for col in meta_new[meta_new.Type == 'float64'].index:
@@ -126,13 +130,13 @@ for col in meta_new[meta_new.Type == 'float64'].index:
     plt.show()
 
 
-# In[16]:
+# In[17]:
 
 
 data[meta_new[meta_new.Type == 'int64'].index].describe().T
 
 
-# In[17]:
+# In[18]:
 
 
 for col in meta_new[meta_new.Type == 'int64'].index:
@@ -141,7 +145,7 @@ for col in meta_new[meta_new.Type == 'int64'].index:
     plt.show()
 
 
-# In[91]:
+# In[19]:
 
 
 # for col in meta_new[meta_new.Type == 'object'].index:
@@ -156,38 +160,36 @@ for col in meta_new[meta_new.Type == 'int64'].index:
 # 
 # `term` has only two values 36 and 60, though it is type of int64. 
 
-# In[19]:
+# In[20]:
 
 
 meta_new = meta_new.drop(['num_accounts_120d_past_due', 'current_accounts_delinq', 'num_accounts_30d_past_due'])
 
 
-# In[20]:
+# In[21]:
 
 
 Y = data['interest_rate']
 sns.histplot(Y, bins=30)
 
 
-# ## Preliminary Feature Selection 
+# ## Feature Selection 
 
 # ### Correlation of numerical features
-
-# In[21]:
-
-
-from sklearn.feature_selection import SelectKBest
-from scipy.stats import pearsonr 
-
 
 # In[22]:
 
 
-# missing value?
-data_nonan = data.dropna(axis=0, how='any')
+from scipy.stats import pearsonr 
 
 
 # In[23]:
+
+
+data_nonan = data.dropna(axis=0, how='any')
+
+
+# In[24]:
 
 
 correlation_dict = []
@@ -197,13 +199,13 @@ for col in meta_new[meta_new.Type == 'float64'].index:
     correlation_dict.append(dict_tmp)
 
 
-# In[24]:
+# In[25]:
 
 
 pd.DataFrame(correlation_dict).set_index('Name').sort_values('P-value')
 
 
-# In[25]:
+# In[26]:
 
 
 correlation_dict = []
@@ -213,7 +215,7 @@ for col in meta_new[meta_new.Type == 'int64'].index:
     correlation_dict.append(dict_tmp)
 
 
-# In[26]:
+# In[27]:
 
 
 pd.DataFrame(correlation_dict).set_index('Name').sort_values('P-value')
@@ -221,7 +223,7 @@ pd.DataFrame(correlation_dict).set_index('Name').sort_values('P-value')
 
 # ### XGBoost for numerical features
 
-# In[27]:
+# In[28]:
 
 
 import xgboost as xgb
@@ -261,13 +263,13 @@ plt.show()
 
 # The features that have significant correlation with `interest_rate` and the features that have feature importance higher than the 'elbow point' are selected currently. 
 
-# In[28]:
+# In[29]:
 
 
 continuous_cols = ['paid_interest', 'annual_income', 'months_since_last_credit_inquiry', 'paid_principal', 'term', 'total_debit_limit', 'inquiries_last_12m', 'total_credit_limit', 'num_mort_accounts', 'accounts_opened_24m', 'balance', 'installment', 'paid_total', 'loan_amount']
 
 
-# In[29]:
+# In[30]:
 
 
 sns.heatmap(abs(data[continuous_cols].corr()))
@@ -281,20 +283,20 @@ sns.heatmap(abs(data[continuous_cols].corr()))
 # 
 # Now, we have 11 numerical features.
 
-# In[30]:
+# In[31]:
 
 
 continuous_cols = ['paid_interest', 'annual_income', 'months_since_last_credit_inquiry', 'paid_principal', 'total_debit_limit', 'inquiries_last_12m', 'total_credit_limit', 'num_mort_accounts', 'accounts_opened_24m', 'balance']
 len(continuous_cols)
 
 
-# In[31]:
+# In[32]:
 
 
 sns.heatmap(abs(data[continuous_cols].corr()))
 
 
-# In[32]:
+# In[33]:
 
 
 data['term_new'] = 0
@@ -303,13 +305,13 @@ data.loc[data['term'] == 60, 'term_new'] = 1
 
 # ### Categorical Features
 
-# In[33]:
+# In[34]:
 
 
 state_group = pd.DataFrame(data.groupby('state')['interest_rate'].mean()).reset_index().reset_index()
 
 
-# In[34]:
+# In[35]:
 
 
 fig,ax = plt.subplots(figsize=(10,8))
@@ -322,31 +324,31 @@ def label_point(x, y, val, ax):
 label_point(state_group['index'], state_group.interest_rate, state_group.state, plt.gca())  
 
 
-# In[35]:
+# In[36]:
 
 
 from scipy import stats
 
 
-# In[36]:
+# In[37]:
 
 
 stats.f_oneway(data[data.homeownership == 'MORTGAGE'].interest_rate, data[data.homeownership == 'RENT'].interest_rate, data[data.homeownership == 'OWN'].interest_rate)
 
 
-# In[37]:
+# In[38]:
 
 
 import pingouin as pg
 
 
-# In[38]:
+# In[39]:
 
 
 catgorical_cols = list(meta_new[(meta_new.Type == 'object') & (meta_new.Unique < 15)].index)
 
 
-# In[39]:
+# In[40]:
 
 
 anova_dict = []
@@ -356,61 +358,61 @@ for col in catgorical_cols:
     anova_dict.append(dict_tmp)
 
 
-# In[40]:
+# In[41]:
 
 
 pd.DataFrame(anova_dict).set_index('Name')
 
 
-# In[41]:
+# In[42]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'homeownership')
 
 
-# In[42]:
+# In[43]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'verified_income')
 
 
-# In[43]:
+# In[44]:
 
 
 tukey_loanPurpose = pg.pairwise_tukey(data, 'interest_rate', 'loan_purpose').sort_values('p-tukey')
 
 
-# In[44]:
+# In[45]:
 
 
 tukey_loanPurpose[tukey_loanPurpose['p-tukey'] < 0.05]
 
 
-# In[45]:
+# In[46]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'application_type').sort_values('p-tukey')
 
 
-# In[46]:
+# In[47]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'grade').sort_values('p-tukey')
 
 
-# In[47]:
+# In[48]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'loan_status').sort_values('p-tukey')
 
 
-# In[48]:
+# In[49]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'initial_listing_status').sort_values('p-tukey')
 
 
-# In[49]:
+# In[50]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'disbursement_method').sort_values('p-tukey')
@@ -430,7 +432,7 @@ pg.pairwise_tukey(data, 'interest_rate', 'disbursement_method').sort_values('p-t
 # 
 # `application_type`, `initial_listing_status` and `disbursement_method` to be recoded as binary
 
-# In[50]:
+# In[51]:
 
 
 # state
@@ -438,7 +440,7 @@ data['state_new'] = 0
 data.loc[(data['state'] == 'HI') | (data['state'] == 'ND'), 'state_new'] = 1
 
 
-# In[51]:
+# In[52]:
 
 
 # homeownership 
@@ -446,7 +448,7 @@ data['homeownership_new'] = 0
 data.loc[data['homeownership'] == 'RENT', 'homeownership_new'] = 1
 
 
-# In[52]:
+# In[53]:
 
 
 # verified_income
@@ -457,7 +459,7 @@ data['verified_income_Verified'] = 0
 data.loc[data['verified_income'] == 'Verified', 'verified_income_Verified'] = 1
 
 
-# In[53]:
+# In[54]:
 
 
 # loan purpose
@@ -468,7 +470,7 @@ data['loan_purpose_consolid'] = 0
 data.loc[data['loan_purpose'] == 'debt_consolidation', 'loan_purpose_consolid'] = 1
 
 
-# In[54]:
+# In[55]:
 
 
 # grade
@@ -482,7 +484,7 @@ data.loc[data['grade'] == 'F', 'grade_new'] = 6
 data.loc[data['grade'] == 'G', 'grade_new'] = 7
 
 
-# In[55]:
+# In[56]:
 
 
 # loan_status
@@ -493,7 +495,7 @@ data['loan_status_paid'] = 0
 data.loc[data['loan_status'] == 'Fully Paid', 'loan_status_paid'] = 1
 
 
-# In[56]:
+# In[57]:
 
 
 # application_type
@@ -501,7 +503,7 @@ data['application_type_new'] = 0
 data.loc[data['application_type'] == 'joint', 'application_type_new'] = 1
 
 
-# In[57]:
+# In[58]:
 
 
 # initial_listing_status
@@ -509,7 +511,7 @@ data['initial_listing_status_new'] = 0
 data.loc[data['initial_listing_status'] == 'fractional', 'initial_listing_status_new'] = 1
 
 
-# In[58]:
+# In[59]:
 
 
 # disbursement_method
@@ -519,14 +521,18 @@ data.loc[data['disbursement_method'] == 'DirectPay', 'disbursement_method_new'] 
 
 # ### XGBoost for categorical features
 
-# In[59]:
+# In[60]:
 
 
-categorical_cols = ['state_new', 'homeownership_new', 'verified_income_sourceVerified', 'verified_income_Verified', 'loan_purpose_card', 'loan_purpose_consolid', 'grade_new', 'loan_status_current', 'loan_status_paid', 'application_type_new', 'initial_listing_status_new', 'disbursement_method_new']
+categorical_cols = ['state_new', 'homeownership_new', 'verified_income_sourceVerified', 
+                    'verified_income_Verified', 'loan_purpose_card', 
+                    'loan_purpose_consolid', 'grade_new', 'loan_status_current', 
+                    'loan_status_paid', 'application_type_new', 'initial_listing_status_new', 
+                    'disbursement_method_new']
 len(categorical_cols)
 
 
-# In[60]:
+# In[61]:
 
 
 data_xgb = []
@@ -561,7 +567,7 @@ plt.show()
 
 # According to feature importance, there are 8 recoded categorical features remained currently. 
 
-# In[61]:
+# In[62]:
 
 
 categorical_cols = ['homeownership_new', 'verified_income_sourceVerified', 'verified_income_Verified', 'loan_purpose_card', 'loan_purpose_consolid', 'grade_new', 'application_type_new', 'initial_listing_status_new', 'term_new']
@@ -570,14 +576,14 @@ len(categorical_cols)
 
 # ## Current Feature Set
 
-# In[62]:
+# In[63]:
 
 
 feature_cols = continuous_cols+categorical_cols
 len(feature_cols)
 
 
-# In[63]:
+# In[64]:
 
 
 meta_dict = []
@@ -594,13 +600,13 @@ for col in feature_cols:
     meta_dict.append(dict_tmp)
 
 
-# In[64]:
+# In[65]:
 
 
 pd.DataFrame(meta_dict).set_index('Name')
 
 
-# In[65]:
+# In[66]:
 
 
 # for col in feature_cols:
@@ -609,15 +615,15 @@ pd.DataFrame(meta_dict).set_index('Name')
 #     plt.show()
 
 
-# In[66]:
+# In[67]:
 
 
 data = data.fillna({'months_since_last_credit_inquiry': 0})
 
 
-# ## Modelling
+# ## 4 Modelling
 
-# In[67]:
+# In[68]:
 
 
 from sklearn.model_selection import cross_val_score
@@ -625,15 +631,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from  sklearn.metrics import  mean_squared_error as MSE
 from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
 
 
-# In[68]:
+# In[69]:
 
 
 data_new = data.copy()
 
 
-# In[69]:
+# In[70]:
 
 
 for col in continuous_cols:
@@ -641,7 +648,7 @@ for col in continuous_cols:
     data_new = data_new.loc[data_new[col] < np.quantile(data_new[col], 0.99), :]
 
 
-# In[70]:
+# In[71]:
 
 
 X = data[feature_cols].values
@@ -650,43 +657,37 @@ y = data['interest_rate'].values
 
 # ### Baseline Model
 
-# In[71]:
+# In[72]:
 
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state=10)
 
 
-# In[72]:
+# In[73]:
 
 
 reg = LinearRegression()
 reg.fit(X_train, y_train)
 
 
-# In[73]:
+# In[74]:
 
 
 y_pred = reg.predict(X_test)
 
 
-# In[74]:
-
-
-reg.score(X_test, y_test)
-
-
 # In[75]:
 
 
-mse=MSE(y_pred,y_test)
-print('RMSE: ', np.sqrt(mse))
+lr_r2 = reg.score(X_test, y_test)
+print('R-squared: ', lr_r2)
 
 
 # In[76]:
 
 
-r_2 = r2_score(y_pred = y_pred, y_true = y_test)
-print('R-squared: ', r_2)
+lr_rmse = np.sqrt(MSE(y_pred,y_test))
+print('RMSE: ', lr_rmse)
 
 
 # ### Lasso
@@ -720,7 +721,8 @@ lasso.alpha_
 # In[81]:
 
 
-lasso.score(X_test, y_test)
+lasso_r2 = lasso.score(X_test, y_test)
+print('R-squared: ', lasso_r2)
 
 
 # In[82]:
@@ -732,14 +734,22 @@ y_pred = lasso.predict(X_test)
 # In[83]:
 
 
-mse=MSE(y_pred=y_pred, y_true=y_test)
-print('RMSE: ', np.sqrt(mse))
+lasso_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
+print('RMSE: ', lasso_rmse)
 
 
 # In[84]:
 
 
-lasso.score(X_train, y_train)
+plt.scatter(y_test,y_pred-y_test,
+            c='limegreen',
+            edgecolor='white',
+            marker='s',
+            s=35,
+            alpha=0.6,
+            label='Test Data')
+plt.xlabel("Y_true")
+plt.ylabel("Residuals")
 
 
 # In[85]:
@@ -775,25 +785,110 @@ from sklearn.tree import DecisionTreeRegressor
 # In[88]:
 
 
-tree = DecisionTreeRegressor(random_state=10)
+param = {'min_samples_leaf':[1,3,5,10,15,20], 'max_depth':[5,10,15,20]}
+tree = GridSearchCV(DecisionTreeRegressor(), param_grid=param, cv=5)
 tree.fit(X_train, y_train)
 
 
 # In[89]:
 
 
-tree.score(X_test, y_test)
+tree.best_params_
 
 
 # In[90]:
 
 
+tree_r2 = tree.score(X_test, y_test)
+print('R-squared: ', tree_r2)
+
+
+# In[91]:
+
+
 y_pred = tree.predict(X_test)
-MSE(y_pred=y_pred, y_true=y_test)
+tree_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
+print('RMSE: ', tree_rmse)
 
 
-# In[ ]:
+# In[92]:
 
 
+plt.scatter(y_test,y_pred-y_test,
+            c='limegreen',
+            edgecolor='white',
+            marker='s',
+            s=35,
+            alpha=0.6,
+            label='Test Data')
+plt.xlabel("Y_true")
+plt.ylabel("Residuals")
 
+
+# ### Random Forest
+
+# In[93]:
+
+
+from sklearn.ensemble import RandomForestRegressor
+
+
+# In[94]:
+
+
+# param = {'n_estimators':[10,100,1000,1500], 'max_depth':[10,15,20]}
+param = {'n_estimators':[1500], 'max_depth':[20]}
+forest = GridSearchCV(RandomForestRegressor(), param_grid=param, cv=5, n_jobs=4)
+forest.fit(X_train, y_train)
+
+
+# In[95]:
+
+
+forest.best_params_
+
+
+# In[96]:
+
+
+forest_r2 = forest.score(X_test, y_test)
+print('R-squared: ', forest_r2)
+
+
+# In[97]:
+
+
+y_pred = forest.predict(X_test)
+forest_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
+print('RMSE: ', forest_rmse)
+
+
+# In[98]:
+
+
+y_pred_train = forest.predict(X_train)
+
+
+# In[99]:
+
+
+plt.scatter(y_test,y_pred-y_test,
+            c='limegreen',
+            edgecolor='white',
+            marker='s',
+            s=35,
+            alpha=0.6,
+            label='Test Data')
+plt.xlabel("Y_true")
+plt.ylabel("Residuals")
+
+
+# ### Model Evaluation
+
+# In[100]:
+
+
+pd.DataFrame({'Model': ['Lasso', 'Regression Tree', 'Random Forest'], 
+              'R-suqared':[lasso_r2, tree_r2, forest_r2], 
+              'RMSE': [lasso_rmse, tree_r2, forest_rmse]})
 
