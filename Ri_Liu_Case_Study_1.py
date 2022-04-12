@@ -3,7 +3,7 @@
 
 # # 1 Read Data
 
-# In[1]:
+# In[85]:
 
 
 import pandas as pd
@@ -12,33 +12,33 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-# In[2]:
+# In[86]:
 
 
 import warnings
 warnings.filterwarnings("ignore")
 
 
-# In[3]:
+# In[87]:
 
 
 pd.set_option('display.float_format',lambda x : '%.4f' % x)
 
 
-# In[4]:
+# In[88]:
 
 
 data_raw = pd.read_csv('loans_full_schema.csv')
 data = data_raw.copy()
 
 
-# In[5]:
+# In[89]:
 
 
 data.shape
 
 
-# In[6]:
+# In[90]:
 
 
 data.head(5).append(data.tail(5))
@@ -46,7 +46,7 @@ data.head(5).append(data.tail(5))
 
 # # 2 Describe Data
 
-# In[7]:
+# In[91]:
 
 
 meta_dict = []
@@ -63,20 +63,20 @@ for col in data.columns:
     meta_dict.append(dict_tmp)
 
 
-# In[8]:
+# In[92]:
 
 
 meta = pd.DataFrame(meta_dict)
 meta = meta.set_index('Name').drop('interest_rate')
 
 
-# In[9]:
+# In[93]:
 
 
 meta.sort_values('NA%', ascending=False).head(15)
 
 
-# In[10]:
+# In[94]:
 
 
 # column names of columns having more than 50% missing values
@@ -84,26 +84,26 @@ high_NA = meta[meta['NA%'] > 50].index
 high_NA
 
 
-# In[11]:
+# In[95]:
 
 
 meta_new = meta[meta['NA%'] <= 50]
 # meta_new.sort_values('NA%', ascending=False)
 
 
-# In[12]:
+# In[96]:
 
 
 pd.DataFrame({'Number of variables': meta_new.groupby('Type').size()})
 
 
-# In[13]:
+# In[97]:
 
 
 meta_new.sort_values('NA%', ascending=False).head(10)
 
 
-# In[14]:
+# In[98]:
 
 
 # `emp_title` has too many unique text values, so I drop it
@@ -115,13 +115,13 @@ meta_new.shape
 
 # ### Statistical Attributes of Variables
 
-# In[15]:
+# In[99]:
 
 
 data[meta_new[meta_new.Type == 'float64'].index].describe().T
 
 
-# In[16]:
+# In[100]:
 
 
 for col in meta_new[meta_new.Type == 'float64'].index:
@@ -130,13 +130,13 @@ for col in meta_new[meta_new.Type == 'float64'].index:
     plt.show()
 
 
-# In[17]:
+# In[101]:
 
 
 data[meta_new[meta_new.Type == 'int64'].index].describe().T
 
 
-# In[18]:
+# In[102]:
 
 
 for col in meta_new[meta_new.Type == 'int64'].index:
@@ -145,7 +145,7 @@ for col in meta_new[meta_new.Type == 'int64'].index:
     plt.show()
 
 
-# In[19]:
+# In[103]:
 
 
 # for col in meta_new[meta_new.Type == 'object'].index:
@@ -160,13 +160,13 @@ for col in meta_new[meta_new.Type == 'int64'].index:
 # 
 # `term` has only two values 36 and 60, though it is type of int64. 
 
-# In[20]:
+# In[104]:
 
 
 meta_new = meta_new.drop(['num_accounts_120d_past_due', 'current_accounts_delinq', 'num_accounts_30d_past_due'])
 
 
-# In[21]:
+# In[105]:
 
 
 Y = data['interest_rate']
@@ -177,19 +177,19 @@ sns.histplot(Y, bins=30)
 
 # ### Correlation of numerical features
 
-# In[22]:
+# In[106]:
 
 
 from scipy.stats import pearsonr 
 
 
-# In[23]:
+# In[107]:
 
 
 data_nonan = data.dropna(axis=0, how='any')
 
 
-# In[24]:
+# In[108]:
 
 
 correlation_dict = []
@@ -199,13 +199,13 @@ for col in meta_new[meta_new.Type == 'float64'].index:
     correlation_dict.append(dict_tmp)
 
 
-# In[25]:
+# In[109]:
 
 
 pd.DataFrame(correlation_dict).set_index('Name').sort_values('P-value')
 
 
-# In[26]:
+# In[110]:
 
 
 correlation_dict = []
@@ -215,7 +215,7 @@ for col in meta_new[meta_new.Type == 'int64'].index:
     correlation_dict.append(dict_tmp)
 
 
-# In[27]:
+# In[111]:
 
 
 pd.DataFrame(correlation_dict).set_index('Name').sort_values('P-value')
@@ -223,7 +223,7 @@ pd.DataFrame(correlation_dict).set_index('Name').sort_values('P-value')
 
 # ### XGBoost for numerical features
 
-# In[28]:
+# In[112]:
 
 
 import xgboost as xgb
@@ -263,13 +263,16 @@ plt.show()
 
 # The features that have significant correlation with `interest_rate` and the features that have feature importance higher than the 'elbow point' are selected currently. 
 
-# In[29]:
+# In[113]:
 
 
-continuous_cols = ['paid_interest', 'annual_income', 'months_since_last_credit_inquiry', 'paid_principal', 'term', 'total_debit_limit', 'inquiries_last_12m', 'total_credit_limit', 'num_mort_accounts', 'accounts_opened_24m', 'balance', 'installment', 'paid_total', 'loan_amount']
+continuous_cols = ['paid_interest', 'annual_income', 'months_since_last_credit_inquiry', 
+                   'paid_principal', 'term', 'total_debit_limit', 'inquiries_last_12m', 
+                   'total_credit_limit', 'num_mort_accounts', 'accounts_opened_24m', 'balance', 
+                   'installment', 'paid_total', 'loan_amount']
 
 
-# In[30]:
+# In[114]:
 
 
 sns.heatmap(abs(data[continuous_cols].corr()))
@@ -283,20 +286,22 @@ sns.heatmap(abs(data[continuous_cols].corr()))
 # 
 # Now, we have 11 numerical features.
 
-# In[31]:
+# In[115]:
 
 
-continuous_cols = ['paid_interest', 'annual_income', 'months_since_last_credit_inquiry', 'paid_principal', 'total_debit_limit', 'inquiries_last_12m', 'total_credit_limit', 'num_mort_accounts', 'accounts_opened_24m', 'balance']
+continuous_cols = ['paid_interest', 'annual_income', 'months_since_last_credit_inquiry', 
+                   'paid_principal', 'total_debit_limit', 'inquiries_last_12m', 'total_credit_limit', 
+                   'num_mort_accounts', 'accounts_opened_24m', 'balance']
 len(continuous_cols)
 
 
-# In[32]:
+# In[116]:
 
 
 sns.heatmap(abs(data[continuous_cols].corr()))
 
 
-# In[33]:
+# In[117]:
 
 
 data['term_new'] = 0
@@ -305,13 +310,13 @@ data.loc[data['term'] == 60, 'term_new'] = 1
 
 # ### Categorical Features
 
-# In[34]:
+# In[118]:
 
 
 state_group = pd.DataFrame(data.groupby('state')['interest_rate'].mean()).reset_index().reset_index()
 
 
-# In[35]:
+# In[119]:
 
 
 fig,ax = plt.subplots(figsize=(10,8))
@@ -324,31 +329,33 @@ def label_point(x, y, val, ax):
 label_point(state_group['index'], state_group.interest_rate, state_group.state, plt.gca())  
 
 
-# In[36]:
+# In[120]:
 
 
 from scipy import stats
 
 
-# In[37]:
+# In[121]:
 
 
-stats.f_oneway(data[data.homeownership == 'MORTGAGE'].interest_rate, data[data.homeownership == 'RENT'].interest_rate, data[data.homeownership == 'OWN'].interest_rate)
+stats.f_oneway(data[data.homeownership == 'MORTGAGE'].interest_rate, 
+               data[data.homeownership == 'RENT'].interest_rate, 
+               data[data.homeownership == 'OWN'].interest_rate)
 
 
-# In[38]:
+# In[122]:
 
 
 import pingouin as pg
 
 
-# In[39]:
+# In[123]:
 
 
 catgorical_cols = list(meta_new[(meta_new.Type == 'object') & (meta_new.Unique < 15)].index)
 
 
-# In[40]:
+# In[124]:
 
 
 anova_dict = []
@@ -358,61 +365,61 @@ for col in catgorical_cols:
     anova_dict.append(dict_tmp)
 
 
-# In[41]:
+# In[125]:
 
 
 pd.DataFrame(anova_dict).set_index('Name')
 
 
-# In[42]:
+# In[126]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'homeownership')
 
 
-# In[43]:
+# In[127]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'verified_income')
 
 
-# In[44]:
+# In[128]:
 
 
 tukey_loanPurpose = pg.pairwise_tukey(data, 'interest_rate', 'loan_purpose').sort_values('p-tukey')
 
 
-# In[45]:
+# In[129]:
 
 
 tukey_loanPurpose[tukey_loanPurpose['p-tukey'] < 0.05]
 
 
-# In[46]:
+# In[130]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'application_type').sort_values('p-tukey')
 
 
-# In[47]:
+# In[131]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'grade').sort_values('p-tukey')
 
 
-# In[48]:
+# In[132]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'loan_status').sort_values('p-tukey')
 
 
-# In[49]:
+# In[133]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'initial_listing_status').sort_values('p-tukey')
 
 
-# In[50]:
+# In[134]:
 
 
 pg.pairwise_tukey(data, 'interest_rate', 'disbursement_method').sort_values('p-tukey')
@@ -432,7 +439,7 @@ pg.pairwise_tukey(data, 'interest_rate', 'disbursement_method').sort_values('p-t
 # 
 # `application_type`, `initial_listing_status` and `disbursement_method` to be recoded as binary
 
-# In[51]:
+# In[135]:
 
 
 # state
@@ -440,7 +447,7 @@ data['state_new'] = 0
 data.loc[(data['state'] == 'HI') | (data['state'] == 'ND'), 'state_new'] = 1
 
 
-# In[52]:
+# In[136]:
 
 
 # homeownership 
@@ -448,7 +455,7 @@ data['homeownership_new'] = 0
 data.loc[data['homeownership'] == 'RENT', 'homeownership_new'] = 1
 
 
-# In[53]:
+# In[137]:
 
 
 # verified_income
@@ -459,7 +466,7 @@ data['verified_income_Verified'] = 0
 data.loc[data['verified_income'] == 'Verified', 'verified_income_Verified'] = 1
 
 
-# In[54]:
+# In[138]:
 
 
 # loan purpose
@@ -470,7 +477,7 @@ data['loan_purpose_consolid'] = 0
 data.loc[data['loan_purpose'] == 'debt_consolidation', 'loan_purpose_consolid'] = 1
 
 
-# In[55]:
+# In[139]:
 
 
 # grade
@@ -484,7 +491,7 @@ data.loc[data['grade'] == 'F', 'grade_new'] = 6
 data.loc[data['grade'] == 'G', 'grade_new'] = 7
 
 
-# In[56]:
+# In[140]:
 
 
 # loan_status
@@ -495,7 +502,7 @@ data['loan_status_paid'] = 0
 data.loc[data['loan_status'] == 'Fully Paid', 'loan_status_paid'] = 1
 
 
-# In[57]:
+# In[141]:
 
 
 # application_type
@@ -503,7 +510,7 @@ data['application_type_new'] = 0
 data.loc[data['application_type'] == 'joint', 'application_type_new'] = 1
 
 
-# In[58]:
+# In[142]:
 
 
 # initial_listing_status
@@ -511,7 +518,7 @@ data['initial_listing_status_new'] = 0
 data.loc[data['initial_listing_status'] == 'fractional', 'initial_listing_status_new'] = 1
 
 
-# In[59]:
+# In[143]:
 
 
 # disbursement_method
@@ -521,7 +528,7 @@ data.loc[data['disbursement_method'] == 'DirectPay', 'disbursement_method_new'] 
 
 # ### XGBoost for categorical features
 
-# In[60]:
+# In[144]:
 
 
 categorical_cols = ['state_new', 'homeownership_new', 'verified_income_sourceVerified', 
@@ -532,7 +539,7 @@ categorical_cols = ['state_new', 'homeownership_new', 'verified_income_sourceVer
 len(categorical_cols)
 
 
-# In[61]:
+# In[145]:
 
 
 data_xgb = []
@@ -567,23 +574,25 @@ plt.show()
 
 # According to feature importance, there are 8 recoded categorical features remained currently. 
 
-# In[62]:
+# In[146]:
 
 
-categorical_cols = ['homeownership_new', 'verified_income_sourceVerified', 'verified_income_Verified', 'loan_purpose_card', 'loan_purpose_consolid', 'grade_new', 'application_type_new', 'initial_listing_status_new', 'term_new']
+categorical_cols = ['homeownership_new', 'verified_income_sourceVerified', 'verified_income_Verified', 
+                    'loan_purpose_card', 'loan_purpose_consolid', 'grade_new', 'application_type_new', 
+                    'initial_listing_status_new', 'term_new']
 len(categorical_cols)
 
 
 # ## Current Feature Set
 
-# In[63]:
+# In[147]:
 
 
 feature_cols = continuous_cols+categorical_cols
 len(feature_cols)
 
 
-# In[64]:
+# In[148]:
 
 
 meta_dict = []
@@ -600,13 +609,13 @@ for col in feature_cols:
     meta_dict.append(dict_tmp)
 
 
-# In[65]:
+# In[149]:
 
 
 pd.DataFrame(meta_dict).set_index('Name')
 
 
-# In[66]:
+# In[150]:
 
 
 # for col in feature_cols:
@@ -615,40 +624,48 @@ pd.DataFrame(meta_dict).set_index('Name')
 #     plt.show()
 
 
-# In[67]:
+# In[ ]:
 
 
-data = data.fillna({'months_since_last_credit_inquiry': 0})
+
+
+
+# In[151]:
+
+
+from sklearn.impute import SimpleImputer
+
+
+# In[152]:
+
+
+mean_imputer = SimpleImputer(strategy = 'mean')
+
+
+# In[153]:
+
+
+data['months_since_last_credit_inquiry'] = mean_imputer.fit_transform(data[['months_since_last_credit_inquiry']])
 
 
 # ## 4 Modelling
 
-# In[68]:
+# In[154]:
 
 
-from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from  sklearn.metrics import  mean_squared_error as MSE
-from sklearn.metrics import r2_score
 from sklearn.model_selection import GridSearchCV
 
 
-# In[69]:
+# In[155]:
 
 
 data_new = data.copy()
 
 
-# In[70]:
-
-
-for col in continuous_cols:
-    # print(sum(data[col] < np.quantile(data[col], 0.999)))
-    data_new = data_new.loc[data_new[col] < np.quantile(data_new[col], 0.99), :]
-
-
-# In[71]:
+# In[156]:
 
 
 X = data[feature_cols].values
@@ -657,88 +674,210 @@ y = data['interest_rate'].values
 
 # ### Baseline Model
 
-# In[72]:
+# In[157]:
 
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state=10)
 
 
-# In[73]:
+# In[158]:
 
 
 reg = LinearRegression()
 reg.fit(X_train, y_train)
 
 
-# In[74]:
+# In[159]:
 
 
 y_pred = reg.predict(X_test)
 
 
-# In[75]:
+# In[160]:
 
 
 lr_r2 = reg.score(X_test, y_test)
 print('R-squared: ', lr_r2)
 
 
-# In[76]:
+# In[161]:
 
 
 lr_rmse = np.sqrt(MSE(y_pred,y_test))
 print('RMSE: ', lr_rmse)
 
 
+# In[ ]:
+
+
+
+
+
+# ## Feature Engineering
+
+# In[162]:
+
+
+for col in continuous_cols:
+    plt.figure()
+    sns.histplot(data[col])
+    plt.show()
+
+
+# ### Binning for unbalanced features
+
+# In[163]:
+
+
+# total_credit_limit_cut = pd.factorize(pd.cut(data.total_credit_limit, 
+#     list(np.quantile(data.total_credit_limit, [0, 0.33, 0.67, 0.9, 1])), 
+#     labels=[0, 1, 2, 3]))[0]
+to_be_cut = ['paid_principal', 'annual_income', 'total_debit_limit']
+for col in to_be_cut:
+    new_colname = col + '_' + 'cut'
+    new_col = pd.factorize(pd.cut(data.total_credit_limit, 
+    list(np.quantile(data.total_credit_limit, [0, 0.33, 0.67, 0.9, 1])), 
+    labels=[0, 1, 2, 3]))[0]
+    data[new_colname] = new_col 
+    continuous_cols.remove(col)
+    continuous_cols = continuous_cols + [new_colname]
+
+
+# In[ ]:
+
+
+data = data.fillna({'annual_income_cut': 0, 
+    'paid_principal_cut': 0, 'total_debit_limit_cut': 0, 
+    'total_credit_limit_cut': 0})
+
+
+# #### Feature set
+
+# In[245]:
+
+
+feature_cols
+
+
+# ### Interaction terms
+
+# In[188]:
+
+
+from sklearn.preprocessing import PolynomialFeatures
+
+
+# In[190]:
+
+
+# poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+# data_poly = pd.DataFrame(data=poly.fit_transform(data[feature_cols]), 
+#                             columns=poly.get_feature_names_out(feature_cols))
+
+data_poly = data[feature_cols]
+for cate in categorical_cols:
+    for col in continuous_cols:
+        new_colname = cate + '_' + col
+        new_col = data[cate] * data[col]
+        data_poly[new_colname] = new_col
+
+
+# In[191]:
+
+
+data_poly.describe().T.sort_values('std')
+
+
+# In[192]:
+
+
+X = data_poly.values
+y = data['interest_rate'].values
+
+
+# In[167]:
+
+
+X = data[feature_cols]
+y = data['interest_rate'].values
+
+
+# In[193]:
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state=10)
+
+
+# In[178]:
+
+
+feature_cols = continuous_cols+categorical_cols
+
+
 # ### Lasso
 
-# In[77]:
+# In[194]:
 
 
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import LassoCV
 
 
-# In[78]:
+# In[195]:
 
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state=10)
+alphas = [0, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1]
+lasso_dict = []
+for alpha in alphas:
+    lasso = LassoCV(alphas=[alpha])
+    lasso.fit(X_train, y_train)
+    tmp_r_2 = lasso.score(X_test, y_test)
+    y_pred = lasso.predict(X_test)
+    tmp_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
+    dict_tmp = {'alpha': alpha, 'R-squared': tmp_r_2, 'RMSE': tmp_rmse}
+    lasso_dict.append(dict_tmp)
 
 
-# In[79]:
+# In[197]:
 
 
-lasso = LassoCV(alphas = [0,0.1,0.01, 0.001, 0.0001])
+lasso_dict = pd.DataFrame(lasso_dict).sort_values('alpha', ascending=True)
+
+
+# In[198]:
+
+
+plt.figure(12, figsize=(10,5))
+plt.subplot(121)
+sns.pointplot(lasso_dict.alpha, lasso_dict['R-squared'])
+plt.subplot(122)
+sns.pointplot(lasso_dict.alpha, lasso_dict.RMSE)
+
+
+# In[199]:
+
+
+lasso = LassoCV(alphas=[0.01])
 lasso.fit(X_train, y_train)
 
 
-# In[80]:
-
-
-lasso.alpha_
-
-
-# In[81]:
+# In[200]:
 
 
 lasso_r2 = lasso.score(X_test, y_test)
 print('R-squared: ', lasso_r2)
 
 
-# In[82]:
+# In[201]:
 
 
 y_pred = lasso.predict(X_test)
-
-
-# In[83]:
-
-
 lasso_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
 print('RMSE: ', lasso_rmse)
 
 
-# In[84]:
+# In[204]:
 
 
 plt.scatter(y_test,y_pred-y_test,
@@ -752,58 +891,96 @@ plt.xlabel("Y_true")
 plt.ylabel("Residuals")
 
 
-# In[85]:
+# In[205]:
 
 
-feat_importance = pd.DataFrame({'column': data[feature_cols].columns, 'coef':list(lasso.coef_)})
+feat_importance = pd.DataFrame({'column': data_poly.columns, 'coef':list(lasso.coef_)})
 feat_importance['importance'] = np.abs(feat_importance.coef)
 feat_importance = feat_importance.sort_values(by='importance', ascending=False)
-feat_importance
-
-
-# In[86]:
-
-
-# feature_cols = list(feat_importance.loc[feat_importance.importance > 0.001, 'column'].values)
-feature_cols
-
-
-# In[ ]:
-
-
-
+feat_importance.head(15)
 
 
 # ### Regression Tree
 
-# In[87]:
+# In[206]:
 
 
 from sklearn.tree import DecisionTreeRegressor
 
 
-# In[88]:
+# In[228]:
 
 
-param = {'min_samples_leaf':[1,3,5,10,15,20], 'max_depth':[5,10,15,20]}
+# X = data_poly[feat_cols]
+# y = data['interest_rate'].values
+
+
+# In[210]:
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state=10)
+# min_samples_leaf = [1,3,5,10,15,20]
+# max_depth = [10,50,100,150]
+min_samples_leaf = [10,20,30,40,50]
+max_depth = [20,50,100,150,200]
+tree_dict = []
+for leaf in min_samples_leaf:
+    for depth in max_depth:        
+        param = {'min_samples_leaf':[leaf], 'max_depth':[depth]}
+        tree = GridSearchCV(DecisionTreeRegressor(), param_grid=param, cv=5)
+        tree.fit(X_train, y_train)
+        tmp_r_2 = tree.score(X_test, y_test)
+        y_pred = tree.predict(X_test)
+        tmp_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
+        dict_tmp = {'min_samples_leaf': leaf, 'max_depth': depth, 'R-squared': tmp_r_2, 'RMSE': tmp_rmse}
+        tree_dict.append(dict_tmp)
+
+
+# In[211]:
+
+
+tree_dict = pd.DataFrame(tree_dict)
+
+
+# In[212]:
+
+
+plt.figure(12, figsize=(10,5))
+plt.subplot(121)
+sns.pointplot(tree_dict.min_samples_leaf, tree_dict['R-squared'], tree_dict.max_depth)
+plt.subplot(122)
+sns.pointplot(tree_dict.min_samples_leaf, tree_dict['RMSE'], tree_dict.max_depth)
+
+
+# In[218]:
+
+
+# Use the best parameters to fit the model
+param = {'min_samples_leaf':[40], 'max_depth':[50]}
 tree = GridSearchCV(DecisionTreeRegressor(), param_grid=param, cv=5)
 tree.fit(X_train, y_train)
 
 
-# In[89]:
+# In[219]:
 
 
 tree.best_params_
 
 
-# In[90]:
+# In[220]:
+
+
+y_pred = tree.predict(X_test)
+
+
+# In[221]:
 
 
 tree_r2 = tree.score(X_test, y_test)
 print('R-squared: ', tree_r2)
 
 
-# In[91]:
+# In[222]:
 
 
 y_pred = tree.predict(X_test)
@@ -811,7 +988,7 @@ tree_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
 print('RMSE: ', tree_rmse)
 
 
-# In[92]:
+# In[224]:
 
 
 plt.scatter(y_test,y_pred-y_test,
@@ -827,35 +1004,72 @@ plt.ylabel("Residuals")
 
 # ### Random Forest
 
-# In[93]:
+# In[229]:
 
 
 from sklearn.ensemble import RandomForestRegressor
 
 
-# In[94]:
+# In[226]:
 
 
-# param = {'n_estimators':[10,100,1000,1500], 'max_depth':[10,15,20]}
-param = {'n_estimators':[1500], 'max_depth':[20]}
+# To save time on fitting, use less feature set for random forest temporarily
+# It has had better performance than the other models
+X = data[feature_cols]
+y = data['interest_rate'].values
+
+
+# In[237]:
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state=10)
+n_estimators = [100, 500, 1500]
+max_depth = [30,50,100]
+forest_dict = []
+for n in n_estimators:
+    for depth in max_depth:        
+        param = {'n_estimators':[n], 'max_depth':[depth]}
+        forest = GridSearchCV(RandomForestRegressor(), param_grid=param, cv=5, n_jobs=-1)
+        forest.fit(X_train, y_train)
+        tmp_r_2 = forest.score(X_test, y_test)
+        y_pred = forest.predict(X_test)
+        tmp_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
+        dict_tmp = {'n_estimators': n, 'max_depth': depth, 'R-squared': tmp_r_2, 'RMSE': tmp_rmse}
+        forest_dict.append(dict_tmp)
+
+
+# In[238]:
+
+
+forest_dict = pd.DataFrame(forest_dict)
+
+
+# In[239]:
+
+
+plt.figure(12, figsize=(20,10))
+plt.subplot(121)
+sns.pointplot(forest_dict.max_depth, forest_dict['R-squared'], forest_dict.n_estimators)
+plt.subplot(122)
+sns.pointplot(forest_dict.max_depth, forest_dict['RMSE'], forest_dict.n_estimators)
+
+
+# In[240]:
+
+
+param = {'n_estimators':[1500], 'max_depth':[100]}
 forest = GridSearchCV(RandomForestRegressor(), param_grid=param, cv=5, n_jobs=4)
 forest.fit(X_train, y_train)
 
 
-# In[95]:
-
-
-forest.best_params_
-
-
-# In[96]:
+# In[241]:
 
 
 forest_r2 = forest.score(X_test, y_test)
 print('R-squared: ', forest_r2)
 
 
-# In[97]:
+# In[242]:
 
 
 y_pred = forest.predict(X_test)
@@ -863,13 +1077,13 @@ forest_rmse = np.sqrt(MSE(y_pred=y_pred, y_true=y_test))
 print('RMSE: ', forest_rmse)
 
 
-# In[98]:
+# In[243]:
 
 
 y_pred_train = forest.predict(X_train)
 
 
-# In[99]:
+# In[244]:
 
 
 plt.scatter(y_test,y_pred-y_test,
@@ -883,12 +1097,12 @@ plt.xlabel("Y_true")
 plt.ylabel("Residuals")
 
 
-# ### Model Evaluation
+# Summary:
+# 
+# The original data has 10, 000 rows and 55 columns, including 1 target column. The target column 'interest_rate' is not normally distributed. And in feature columns, there are some features that distribute extremely unbalanced, in which are small proportion of values that are far from the majority. Like `annual income` and `debt to income`, which is understandable that people having exceedingly high income or debt is a small proportion. But it's not appropriate to conclude that they are influential outliers to be removed. I used binning to reduce the influence of these points to the regression model. 
+# 
+# The features that are selected initially are basically based on correlation or importance, for the attributes of regression and tree models, and a large proportion of features are dropped. Though some interaction features are derived, there might be some important information not involved in current features. 
+# 
+# If there's more time, it is necessary to get a deeper understanding of all columns in the data. It might also be helpful by creating different feature set for regression and tree model. 
 
-# In[100]:
-
-
-pd.DataFrame({'Model': ['Lasso', 'Regression Tree', 'Random Forest'], 
-              'R-suqared':[lasso_r2, tree_r2, forest_r2], 
-              'RMSE': [lasso_rmse, tree_r2, forest_rmse]})
-
+# 
